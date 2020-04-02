@@ -2,7 +2,6 @@
     Module for slot finding related classes and functions
 """
 from abc import ABC
-import sys
 import os
 import time
 import datetime
@@ -14,7 +13,7 @@ import logging
 from selenium import webdriver
 from bs4 import BeautifulSoup
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 class NotLoggedInError(Exception):
     """ Error for a user who has not gone through the login flow """
@@ -92,7 +91,9 @@ class AmazonSlotFinder(ABC):
             It no alert is found, then it looks for the radio buttons that are presented to the user and checks to see if they are disabled.
             If the number of radio buttons (dates) found is equal to the number of disabled radio buttons, then there are no dates available.
         """
+        LOGGER.debug('Checking for time slot for date %s', date)
         if time_slot is None:
+            LOGGER.debug('No Time Slot found for %s', date)
             return False
         # We're going to retrieve the unattended time slots only for now. Quarantine yall
         time_slot_unattended = time_slot.find(
@@ -100,6 +101,7 @@ class AmazonSlotFinder(ABC):
 
         if time_slot_unattended.find("div", {"class": "a-box a-alert a-alert-info"}):
             # There is an alert box telling us that there is no time slot available for the given date
+            LOGGER.debug('No available dates for %s', date)
             return False
 
         list_of_time_slots = time_slot_unattended.find(
@@ -108,17 +110,19 @@ class AmazonSlotFinder(ABC):
         list_of_disabled_time_slots = time_slot_unattended.find(
             "div", {"id": f'root-{date}-UNATTENDED-box-group'}).find_all("div", {"class": "disabledRadioBox"})
 
-        logger.debug(f'Number of time slots found: {len(list_of_time_slots)}')
-        logger.debug(
-            f'Number of disabled time slots found: {len(list_of_disabled_time_slots)}')
+        LOGGER.debug('Number of time slots found: %s ', len(list_of_time_slots))
+        LOGGER.debug(
+            'Number of disabled time slots found: %s', len(list_of_disabled_time_slots))
         return len(list_of_time_slots) != len(list_of_disabled_time_slots)
 
     def refresh_page(self):
         """ Refreshes the current page """
         self.driver.refresh()
-        time.sleep(1)
+        LOGGER.debug('Sleeping the thread after refresh')
+        time.sleep(5) # There is no way to know when the async calls on the page are done.
+        LOGGER.debug('Thread finished sleeping after refresh')
 
-    def parse_with_beautiful_soup(self):
+    def _parse_with_beautiful_soup(self):
         """
             Takes the source of the web page from selenium and parses it in a Beautiful Soup context
         """
@@ -127,22 +131,33 @@ class AmazonSlotFinder(ABC):
         source = self.driver.page_source
         self.parsed_source = BeautifulSoup(source, "html.parser")
 
+    def _load_next_set_of_dates(self):
+        """ Click the next button the page to load the next set of dates """
+        next_button = self.driver.find_element_by_xpath("//*[@id='nextButton-announce']")
+        if next_button:
+            # Should now have loaded 8 dates
+            LOGGER.debug('Clicking on the next button to load more dates')
+            next_button.click()
+            LOGGER.debug('Sleeping thread after clicking next')
+            time.sleep(5)
+            LOGGER.debug('Done sleeping after clicking next')
+
     def get_available_dates(self) -> List[str]:
         """
             Tries to find any dates that have open slots available for delivery
         """
-        if not self.parsed_source:
-            # Parse needs to be called before this method can be.
-            sys.exit('Source has not been parsed')
-
         date_range = self.get_date_range()
+        LOGGER.debug('Date Range - %s', date_range)
+
+        self._load_next_set_of_dates()
+        self._parse_with_beautiful_soup()
 
         available_dates = []
         for date in date_range:
             slot_container_id = f'slot-container-{date}'
             time_slot = self.parsed_source.find(id=slot_container_id)
             if AmazonSlotFinder.has_open_slots(time_slot, date):
-                logger.debug(f'Found an available time slot for {date}')
+                LOGGER.debug('Found an available time slot for %s', date)
                 available_dates.append(date)
         return available_dates
 

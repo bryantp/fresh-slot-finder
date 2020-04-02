@@ -44,8 +44,6 @@ def main(argv):
     while True:
         print(f'{datetime.datetime.now().strftime(EXECUTION_DATE_TIME_FORMAT)} - Checking time slots')
         logger.debug('Checking time slots')
-        parser.refresh_page()
-        parser.parse_with_beautiful_soup()
         available_dates = parser.get_available_dates()
         if len(available_dates) == 0:
             logger.debug('No time slots available')
@@ -57,6 +55,7 @@ def main(argv):
                 logger.debug(f'Slot - {date}')
                 print(f'Slot - {date}')
         time.sleep(SLEEP_TIME_SECONDS)
+        parser.refresh_page()
 
 
 if __name__ == "__main__":
