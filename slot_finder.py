@@ -64,7 +64,7 @@ class AmazonSlotFinder(ABC):
             Sets up the webpage so that the correct page is open in the browser instance
         """
         self.driver.get(self.url)
-        time.sleep(5)
+        time.sleep(2)
         input(self.LOGIN_QUERY)
         self.logged_in = True
 
@@ -109,6 +109,11 @@ class AmazonSlotFinder(ABC):
         print(
             f'Number of disabled time slots found: {len(list_of_disabled_time_slots)}')
         return len(list_of_time_slots) != len(list_of_disabled_time_slots)
+
+    def refresh_page(self):
+        """ Refreshes the current page """
+        self.driver.refresh()
+        time.sleep(1)
 
     def parse_with_beautiful_soup(self):
         """
