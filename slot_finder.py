@@ -7,6 +7,8 @@ import os
 import time
 import datetime
 import platform
+from typing import List
+
 
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -54,7 +56,7 @@ class AmazonSlotFinder(ABC):
             return '.mac'
         if current_system == 'Linux':
             return '.linux'
-        return None
+        return ''
 
     def login(self):
         """
@@ -66,7 +68,7 @@ class AmazonSlotFinder(ABC):
         input(self.LOGIN_QUERY)
         self.logged_in = True
 
-    def get_date_range(self):
+    def get_date_range(self) -> List[str]:
         """
             Return the list of date range string in the format that Amazon has in its data attributes: 2020-04-02
         """
@@ -79,7 +81,7 @@ class AmazonSlotFinder(ABC):
         return results
 
     @staticmethod
-    def has_open_slots(time_slot, date):
+    def has_open_slots(time_slot, date: str) -> bool:
         """
             Determines if there are any open times slots for amazon fresh delivery.
 
@@ -117,7 +119,7 @@ class AmazonSlotFinder(ABC):
         source = self.driver.page_source
         self.parsed_source = BeautifulSoup(source, "html.parser")
 
-    def get_available_dates(self):
+    def get_available_dates(self) -> List[str]:
         """
             Tries to find any dates that have open slots available for delivery
         """
