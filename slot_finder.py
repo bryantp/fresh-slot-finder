@@ -8,10 +8,13 @@ import time
 import datetime
 import platform
 from typing import List
+import logging
 
 
 from selenium import webdriver
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 class NotLoggedInError(Exception):
     """ Error for a user who has not gone through the login flow """
@@ -105,8 +108,8 @@ class AmazonSlotFinder(ABC):
         list_of_disabled_time_slots = time_slot_unattended.find(
             "div", {"id": f'root-{date}-UNATTENDED-box-group'}).find_all("div", {"class": "disabledRadioBox"})
 
-        print(f'Number of time slots found: {len(list_of_time_slots)}')
-        print(
+        logger.debug(f'Number of time slots found: {len(list_of_time_slots)}')
+        logger.debug(
             f'Number of disabled time slots found: {len(list_of_disabled_time_slots)}')
         return len(list_of_time_slots) != len(list_of_disabled_time_slots)
 
@@ -139,7 +142,7 @@ class AmazonSlotFinder(ABC):
             slot_container_id = f'slot-container-{date}'
             time_slot = self.parsed_source.find(id=slot_container_id)
             if AmazonSlotFinder.has_open_slots(time_slot, date):
-                print(f'Found an available time slot for {date}')
+                logger.debug(f'Found an available time slot for {date}')
                 available_dates.append(date)
         return available_dates
 
