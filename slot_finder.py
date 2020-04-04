@@ -119,7 +119,7 @@ class AmazonSlotFinder(ABC):
         """ Refreshes the current page """
         self.driver.refresh()
         LOGGER.debug('Sleeping the thread after refresh')
-        time.sleep(5) # There is no way to know when the async calls on the page are done.
+        time.sleep(10) # There is no way to know when the async calls on the page are done.
         LOGGER.debug('Thread finished sleeping after refresh')
 
     def _parse_with_beautiful_soup(self):
@@ -139,7 +139,7 @@ class AmazonSlotFinder(ABC):
             LOGGER.debug('Clicking on the next button to load more dates')
             next_button.click()
             LOGGER.debug('Sleeping thread after clicking next')
-            time.sleep(5)
+            time.sleep(10)
             LOGGER.debug('Done sleeping after clicking next')
 
     def get_available_dates(self) -> List[str]:

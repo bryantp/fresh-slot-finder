@@ -35,6 +35,9 @@ def send_notification(message: str):
 
 def run_slot_check():
     """ Runs the main loop for checking delivery slots"""
+    if not USER_CONFIGURATION.get_notification_subscription_url():
+        configure_user_notifications()
+
     parser = ChromeAmazonSlotFinder()
     parser.login()
 
