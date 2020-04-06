@@ -14,7 +14,6 @@ from notifications import NotificationService
 from database import UserConfiguration
 
 
-SLEEP_TIME_SECONDS = 300
 EXECUTION_DATE_TIME_FORMAT = '%m-%d-%Y %H:%M:%S'
 
 LOGGER = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ def run_slot_check():
             for date in available_dates:
                 LOGGER.debug('Slot - %s', date)
                 print(f'Slot - {date}')
-        time.sleep(SLEEP_TIME_SECONDS)
+        time.sleep(UserConfiguration.get_refresh_time_seconds())
         parser.refresh_page()
 
 def configure_user_notifications():
@@ -85,6 +84,40 @@ def delete_notifications():
     LOGGER.debug('Delete all past notifications')
     USER_CONFIGURATION.delete_all_notifications()
 
+def view_current_refresh_rate():
+    """ Print out the current refresh rate """
+    current_refresh_time_seconds = USER_CONFIGURATION.get_refresh_time_seconds()
+    print(f'Current Refresh Time: {get_minutes_from_seconds(current_refresh_time_seconds)} minutes')
+
+def set_new_refresh_rate(refresh_rate_as_seconds: int):
+    """ Set the input refresh rate """
+
+    # Adding another check so the refresh rate is never less than 5 minutes
+    refresh_rate_in_minutes = get_minutes_from_seconds(refresh_rate_as_seconds)
+    if refresh_rate_as_seconds < UserConfiguration.DEFAULT_SLEEP_TIME_SECONDS:
+        LOGGER.warning('Refresh rate cannot be set lower than 5 minutes: %s', refresh_rate_in_minutes)
+        print(f'Refresh rate cannot be set lower than 5 minutes')
+    else:
+        print(f'Setting refresh rate to {refresh_rate_in_minutes} minutes')
+        LOGGER.debug('Setting refresh rate to %s minutes', refresh_rate_in_minutes)
+        USER_CONFIGURATION.set_refresh_time_seconds(refresh_rate_as_seconds)
+
+def show_current_notification_url():
+    """ Print out the current notification url """
+    url = USER_CONFIGURATION.get_notification_subscription_url()
+    if url:
+        print(f'Notification URL {url}')
+    else:
+        print('No notification url has been set.')
+
+def get_seconds_from_minutes(minutes: int) -> int:
+    """ Simple utility to convert minutes into seconds """
+    return minutes * 60
+
+def get_minutes_from_seconds(seconds: int) -> int:
+    """ Simple Utility to convert seconds into minutes """
+    return seconds / 60
+
 def main(argv):
     """ Main application entry point """
     USER_CONFIGURATION.setup()
@@ -96,7 +129,9 @@ def main(argv):
     parser.add_argument("-tn", "--test-notification", help="Send a test notification", action="store_true")
     #pylint:disable-msg=C0301
     parser.add_argument("-dn", "--dump-notifications", help="Dumps the previous N notifications", type=int)
+    parser.add_argument("-nu", "--notifications-url", help="View the notifications url", action="store_true")
     parser.add_argument("-cn", "--clear-notifications", help="Clears all notifications from the local history", action="store_true")
+    parser.add_argument("-r", "--refresh-rate", help="Set/View the refresh rate in minutes", nargs="?", const=-1, type=int)
     args = parser.parse_args()
 
     loglevel = 'WARN'
@@ -104,6 +139,10 @@ def main(argv):
     dump_notifications = False
     send_test_notification = False
     delete_all_notifications = False
+    show_notification_url = False
+    set_refresh_rate = False
+    view_refresh_rate = False
+    refresh_rate_as_seconds = UserConfiguration.DEFAULT_SLEEP_TIME_SECONDS
     limit = 0
 
     if args.log_level:
@@ -117,6 +156,15 @@ def main(argv):
         limit = args.dump_notifications
     elif args.clear_notifications:
         delete_all_notifications = True
+    elif args.notifications_url:
+        show_notification_url = True
+    elif args.refresh_rate:
+        input_rate_as_seconds = get_seconds_from_minutes(args.refresh_rate)
+        if input_rate_as_seconds < UserConfiguration.DEFAULT_SLEEP_TIME_SECONDS:
+            view_refresh_rate = True
+        else:
+            set_refresh_rate = True
+            refresh_rate_as_seconds = input_rate_as_seconds
 
     numeric_level = getattr(logging, loglevel.upper().strip(), None)
     if not isinstance(numeric_level, int):
@@ -136,6 +184,12 @@ def main(argv):
         send_notification('This is a test notification')
     elif delete_all_notifications:
         delete_notifications()
+    elif view_refresh_rate:
+        view_current_refresh_rate()
+    elif set_refresh_rate:
+        set_new_refresh_rate(refresh_rate_as_seconds)
+    elif show_notification_url:
+        show_current_notification_url()
     else:
         run_slot_check()
 

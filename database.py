@@ -15,11 +15,16 @@ class UserConfiguration:
         Handle all persisted user information
     """
 
+    DEFAULT_SLEEP_TIME_SECONDS = 300
+
     DATABASE_NAME = 'slot_finder.db'
     CONFIG_FILE_NAME = 'slot_finder.yml'
 
     NOTIFICATION_CONFIG_SECTION = 'notifications'
     NOTIFICATION_SUB_KEY = 'subscription_url'
+
+    MAIN_CONFIG_KEY = 'main'
+    REFRESH_TIME_SECONDS_KEY = 'refresh_rate_seconds'
 
     LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +48,20 @@ class UserConfiguration:
         self.dirs = AppDirs("SlotFinder", "Bryan")
         self.db_file = os.path.join(self.dirs.user_data_dir, self.DATABASE_NAME)
         self.config_file = os.path.join(self.dirs.user_config_dir, self.CONFIG_FILE_NAME)
+
+    def update_yml_file(self, new_dict):
+        config_file = {}
+        with open(self.config_file, 'r') as config:
+            config_file = yaml.load(config, Loader=yaml.FullLoader)
+
+        if config_file:
+            config_file = {**config_file, **new_dict}
+        else:
+            config_file = new_dict
+        
+        with open(self.config_file, 'w') as config:
+            yaml.dump(config_file, config)
+        
 
     def _connect(self):
         """ Open the connection to the DB """
@@ -70,9 +89,8 @@ class UserConfiguration:
 
     def set_notification_subscription(self, url: str):
         """ Insert notification subscriptions into the DB """
-        with open(self.config_file, 'w') as config:
-            doc = {self.NOTIFICATION_CONFIG_SECTION: {self.NOTIFICATION_SUB_KEY: url}}
-            yaml.dump(doc, config)
+        doc = {self.NOTIFICATION_CONFIG_SECTION: {self.NOTIFICATION_SUB_KEY: url}}
+        self.update_yml_file(doc)
 
     def get_notification_subscription_url(self) -> Any:
         """
@@ -94,6 +112,30 @@ class UserConfiguration:
                 return ''
 
             return config_file[self.NOTIFICATION_CONFIG_SECTION][self.NOTIFICATION_SUB_KEY]
+
+    def set_refresh_time_seconds(self, refresh_time_seconds: int):
+        """ Set the refresh time in the configuration file """
+        doc = {self.MAIN_CONFIG_KEY: {self.REFRESH_TIME_SECONDS_KEY: refresh_time_seconds}}
+        self.update_yml_file(doc)
+
+    def get_refresh_time_seconds(self) -> int:
+        """ Retrieve the configured refresh time """
+        with open(self.config_file, 'r') as config:
+            config_file = yaml.load(config, Loader=yaml.FullLoader)
+
+            if not config_file:
+                self.LOGGER.info('No configuration file set')
+                return self.DEFAULT_SLEEP_TIME_SECONDS
+
+            if self.MAIN_CONFIG_KEY not in config_file:
+                self.LOGGER.warning('No main section set in yaml file')
+                return self.DEFAULT_SLEEP_TIME_SECONDS
+            if self.REFRESH_TIME_SECONDS_KEY not in config_file[self.MAIN_CONFIG_KEY]:
+                self.LOGGER.warning('No refresh section set in yaml file')
+                return self.DEFAULT_SLEEP_TIME_SECONDS
+
+            return config_file[self.MAIN_CONFIG_KEY][self.REFRESH_TIME_SECONDS_KEY]
+
 
     def insert_notification_history(self, message: str):
         """ Insert notification history into the DB """
