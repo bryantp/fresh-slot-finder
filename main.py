@@ -86,19 +86,20 @@ def delete_notifications():
 
 def view_current_refresh_rate():
     """ Print out the current refresh rate """
-    current_refresh_time_seconds = USER_CONFIGURATION.get_refresh_time_minutes()
+    current_refresh_time_seconds = USER_CONFIGURATION.get_refresh_time_seconds()
     print(f'Current Refresh Time: {get_minutes_from_seconds(current_refresh_time_seconds)} minutes')
 
 def set_new_refresh_rate(refresh_rate_as_seconds: int):
     """ Set the input refresh rate """
 
     # Adding another check so the refresh rate is never less than 5 minutes
-    if refresh_rate_as_seconds < 5:
-        LOGGER.warning('Refresh rate cannot be set lower than 5 minutes: %s',get_minutes_from_seconds(refresh_rate_as_seconds))
+    refresh_rate_in_minutes = get_minutes_from_seconds(refresh_rate_as_seconds)
+    if refresh_rate_as_seconds < UserConfiguration.DEFAULT_SLEEP_TIME_SECONDS:
+        LOGGER.warning('Refresh rate cannot be set lower than 5 minutes: %s', refresh_rate_in_minutes)
         print(f'Refresh rate cannot be set lower than 5 minutes')
     else:
-        print(f'Setting refresh rate to {get_minutes_from_seconds(refresh_rate_as_seconds)} minutes')
-        LOGGER.debug('Setting refresh rate to %s minutes', get_minutes_from_seconds(refresh_rate_as_seconds))
+        print(f'Setting refresh rate to {refresh_rate_in_minutes} minutes')
+        LOGGER.debug('Setting refresh rate to %s minutes', refresh_rate_in_minutes)
         USER_CONFIGURATION.set_refresh_time_seconds(refresh_rate_as_seconds)
 
 def show_current_notification_url():
